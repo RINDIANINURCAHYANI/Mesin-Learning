@@ -1,0 +1,119 @@
+:root{
+  --bg: #0f172a;
+  --card: #111827;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --accent: #22c55e;
+  --accent-2: #3b82f6;
+  --danger: #ef4444;
+}
+
+*{ box-sizing: border-box; font-family: system-ui, Arial, sans-serif; }
+body{
+  margin:0;
+  background: radial-gradient(1200px circle at top, #111827, var(--bg));
+  color: var(--text);
+}
+
+.container{
+  max-width: 980px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+
+header{
+  text-align:center;
+  margin-bottom: 18px;
+}
+h1{ margin:0 0 6px; font-size: 2rem; }
+.subtitle{ color: var(--muted); margin:0; }
+
+.card{
+  background: rgba(17,24,39,0.92);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.field{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+}
+label{
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+input, select{
+  background: #0b1020;
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 10px 12px;
+  border-radius: 10px;
+  outline: none;
+}
+input:focus, select:focus{
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+.actions{
+  grid-column: 1 / -1;
+  display:flex;
+  gap:10px;
+  margin-top: 4px;
+}
+button{
+  background: var(--accent);
+  color: #052e16;
+  font-weight: 700;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+button.secondary{
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.result{
+  margin-top: 14px;
+  text-align:center;
+}
+.result .big{
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 6px 0 2px;
+}
+.result.error{
+  border-color: rgba(239,68,68,0.5);
+}
+.result.error h2{ color: var(--danger); }
+
+.note{
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+footer{
+  text-align:center;
+  margin-top: 14px;
+  color: var(--muted);
+}
+
+@media (max-width: 900px){
+  .form-grid{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px){
+  .form-grid{ grid-template-columns: 1fr; }
+  h1{ font-size: 1.6rem; }
+}

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Klasifikasi Risiko Penyakit Jantung - Decision Tree</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Klasifikasi Risiko Penyakit Jantung</h1>
+      <p class="subtitle">Metode Decision Tree (Heart Disease UCI)</p>
+    </header>
+
+    <form method="POST" class="card form-grid">
+
+      <!-- Numerik -->
+      <div class="field">
+        <label>Age (umur)</label>
+        <input type="number" name="age" step="1" required>
+      </div>
+
+      <div class="field">
+        <label>Resting Blood Pressure (trestbps)</label>
+        <input type="number" name="trestbps" step="1" required>
+      </div>
+
+      <div class="field">
+        <label>Cholesterol (chol)</label>
+        <input type="number" name="chol" step="1" required>
+      </div>
+
+      <div class="field">
+        <label>Max Heart Rate (thalch)</label>
+        <input type="number" name="thalch" step="1" required>
+      </div>
+
+      <div class="field">
+        <label>Oldpeak (ST depression)</label>
+        <input type="number" name="oldpeak" step="0.1" required>
+      </div>
+
+      <div class="field">
+        <label>Number of Major Vessels (ca)</label>
+        <select name="ca" required>
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+        </select>
+      </div>
+
+      <!-- Kategorikal teks -->
+      <div class="field">
+        <label>Sex</label>
+        <select name="sex" required>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Dataset / Sumber RS</label>
+        <select name="dataset" required>
+          <option value="Cleveland">Cleveland</option>
+          <option value="Hungary">Hungary</option>
+          <option value="Switzerland">Switzerland</option>
+          <option value="VA Long Beach">VA Long Beach</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Chest Pain Type (cp)</label>
+        <select name="cp" required>
+          <option value="typical angina">typical angina</option>
+          <option value="atypical angina">atypical angina</option>
+          <option value="non-anginal pain">non-anginal pain</option>
+          <option value="asymptomatic">asymptomatic</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Fasting Blood Sugar (fbs)</label>
+        <select name="fbs" required>
+          <option value="FALSE">FALSE (≤ 120 mg/dl)</option>
+          <option value="TRUE">TRUE (&gt; 120 mg/dl)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Resting ECG (restecg)</label>
+        <select name="restecg" required>
+          <option value="normal">normal</option>
+          <option value="st-t abnormality">st-t abnormality</option>
+          <option value="lv hypertrophy">lv hypertrophy</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Exercise-Induced Angina (exang)</label>
+        <select name="exang" required>
+          <option value="FALSE">FALSE (No)</option>
+          <option value="TRUE">TRUE (Yes)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Slope</label>
+        <select name="slope" required>
+          <option value="upsloping">upsloping</option>
+          <option value="flat">flat</option>
+          <option value="downsloping">downsloping</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Thal</label>
+        <select name="thal" required>
+          <option value="normal">normal</option>
+          <option value="fixed defect">fixed defect</option>
+          <option value="reversable defect">reversable defect</option>
+        </select>
+      </div>
+
+      <div class="actions">
+        <button type="submit">Prediksi Risiko</button>
+        <button type="reset" class="secondary">Reset</button>
+      </div>
+    </form>
+
+    {% if error %}
+      <div class="card result error">
+        <h2>Error</h2>
+        <p>{{ error }}</p>
+      </div>
+    {% endif %}
+
+    {% if prediction %}
+      <div class="card result">
+        <h2>Hasil Prediksi</h2>
+        <p class="big">{{ prediction }}</p>
+        <p>Probabilitas berisiko: <b>{{ probability }}%</b></p>
+      </div>
+    {% endif %}
+
+    {% if feature_importance_plot %}
+      <div class="card result" style="margin-top:14px;">
+        <h2>Grafik Feature Importance (Interaktif)</h2>
+        <div>
+          {{ feature_importance_plot | safe }}
+        </div>
+        <p class="note">
+          *Hover atau klik batang untuk melihat nilai numeric.
+        </p>
+      </div>
+    {% endif %}
+
+    <footer>
+      <small>Model: Decision Tree (max_depth=3)</small>
+    </footer>
+  </div>
+</body>
+</html>
