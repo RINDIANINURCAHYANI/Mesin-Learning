@@ -1,5 +1,2 @@
-Flask
-pandas
-numpy
-matplotlib
-plotly
+flask
+streamlit
