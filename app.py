@@ -2,11 +2,6 @@ import os
 import pandas as pd
 import joblib
 import plotly.express as px
-import plotly.io as pio
-
-# =========================
-# TAMBAHAN UNTUK STREAMLIT
-# =========================
 import streamlit as st
 
 # =========================
@@ -14,6 +9,7 @@ import streamlit as st
 # =========================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+@st.cache_resource
 def load_pickle(filename):
     path = os.path.join(BASE_DIR, filename)
     if not os.path.exists(path):
@@ -27,6 +23,11 @@ try:
     model = load_pickle("model.pkl")
     TRAIN_COLUMNS = load_pickle("train_columns.pkl")
     cat_cols = load_pickle("cat_cols.pkl")
+    # amankan tipe datanya
+    if cat_cols is None:
+        cat_cols = []
+    if not isinstance(cat_cols, (list, tuple)):
+        cat_cols = list(cat_cols)
 except Exception as e:
     model = None
     TRAIN_COLUMNS = None
@@ -38,8 +39,7 @@ else:
 # =========================
 # OPTIONAL: FEATURE IMPORTANCE PLOT
 # =========================
-feature_importance_plot = None
-fig_fi = None  # simpan fig Plotly biar bisa ditampilin Streamlit
+fig_fi = None
 if model is not None and TRAIN_COLUMNS is not None:
     try:
         importances = getattr(model, "feature_importances_", None)
@@ -63,11 +63,7 @@ if model is not None and TRAIN_COLUMNS is not None:
                 margin=dict(l=140, r=40, t=60, b=40),
                 height=520
             )
-            feature_importance_plot = pio.to_html(fig_fi, full_html=False)
-        else:
-            feature_importance_plot = None
     except Exception:
-        feature_importance_plot = None
         fig_fi = None
 
 def get_float(val):
@@ -115,7 +111,6 @@ error = None
 
 if submitted and model is not None:
     try:
-        # validasi minimal: numerik wajib diisi (number_input selalu ada nilainya)
         input_df = pd.DataFrame([{
             "age": get_float(age),
             "trestbps": get_float(trestbps),
