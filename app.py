@@ -1,14 +1,16 @@
 import os
-from flask import Flask, render_template, request
 import pandas as pd
 import joblib
 import plotly.express as px
 import plotly.io as pio
 
-app = Flask(__name__)
+# =========================
+# TAMBAHAN UNTUK STREAMLIT
+# =========================
+import streamlit as st
 
 # =========================
-# PATH BASE (AMAN DI VERCEL)
+# PATH BASE (AMAN DI STREAMLIT CLOUD)
 # =========================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,7 +28,6 @@ try:
     TRAIN_COLUMNS = load_pickle("train_columns.pkl")
     cat_cols = load_pickle("cat_cols.pkl")
 except Exception as e:
-    # Kalau ini error, app bakal tetap hidup tapi kasih pesan jelas di halaman
     model = None
     TRAIN_COLUMNS = None
     cat_cols = []
@@ -38,6 +39,7 @@ else:
 # OPTIONAL: FEATURE IMPORTANCE PLOT
 # =========================
 feature_importance_plot = None
+fig_fi = None  # simpan fig Plotly biar bisa ditampilin Streamlit
 if model is not None and TRAIN_COLUMNS is not None:
     try:
         importances = getattr(model, "feature_importances_", None)
@@ -63,100 +65,107 @@ if model is not None and TRAIN_COLUMNS is not None:
             )
             feature_importance_plot = pio.to_html(fig_fi, full_html=False)
         else:
-            # Model tidak punya feature_importances_
             feature_importance_plot = None
-    except Exception as e:
-        # Plot gagal? gak apa-apa, app tetap jalan
+    except Exception:
         feature_importance_plot = None
+        fig_fi = None
 
-def get_float(form, key):
-    val = form.get(key, "")
-    return float(val) if val != "" else None
+def get_float(val):
+    return float(val) if val is not None and val != "" else None
 
-def get_str(form, key):
-    return (form.get(key, "") or "").strip()
+def get_str(val):
+    return (val or "").strip()
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    prediction = None
-    probability = None
-    error = load_error  # kalau load model gagal, langsung tampilkan
+# =========================
+# STREAMLIT UI
+# =========================
+st.set_page_config(page_title="Prediksi Risiko Penyakit Jantung", layout="centered")
+st.title("Prediksi Risiko Penyakit Jantung")
 
-    if request.method == "POST" and model is not None:
-        try:
-            # numerik
-            age = get_float(request.form, "age")
-            trestbps = get_float(request.form, "trestbps")
-            chol = get_float(request.form, "chol")
-            thalch = get_float(request.form, "thalch")
-            oldpeak = get_float(request.form, "oldpeak")
-            ca = get_float(request.form, "ca")
+if load_error:
+    st.error(load_error)
+    st.stop()
 
-            # kategori
-            sex = get_str(request.form, "sex")
-            dataset = get_str(request.form, "dataset")
-            cp = get_str(request.form, "cp")
-            fbs = get_str(request.form, "fbs")
-            restecg = get_str(request.form, "restecg")
-            exang = get_str(request.form, "exang")
-            slope = get_str(request.form, "slope")
-            thal = get_str(request.form, "thal")
+st.write("Isi form di bawah untuk memprediksi risiko penyakit jantung.")
 
-            # validasi minimal
-            if None in [age, trestbps, chol, thalch, oldpeak, ca]:
-                raise ValueError("Semua field numerik wajib diisi.")
+with st.form("predict_form"):
+    st.subheader("Fitur Numerik")
+    age = st.number_input("age", min_value=0.0, step=1.0, format="%.0f")
+    trestbps = st.number_input("trestbps", min_value=0.0, step=1.0, format="%.0f")
+    chol = st.number_input("chol", min_value=0.0, step=1.0, format="%.0f")
+    thalch = st.number_input("thalch", min_value=0.0, step=1.0, format="%.0f")
+    oldpeak = st.number_input("oldpeak", min_value=0.0, step=0.1, format="%.2f")
+    ca = st.number_input("ca", min_value=0.0, step=1.0, format="%.0f")
 
-            input_df = pd.DataFrame([{
-                "age": age,
-                "trestbps": trestbps,
-                "chol": chol,
-                "thalch": thalch,
-                "oldpeak": oldpeak,
-                "ca": ca,
-                "sex": sex,
-                "dataset": dataset,
-                "cp": cp,
-                "fbs": fbs,
-                "restecg": restecg,
-                "exang": exang,
-                "slope": slope,
-                "thal": thal
-            }])
+    st.subheader("Fitur Kategori")
+    sex = st.selectbox("sex", ["", "male", "female"])
+    dataset = st.selectbox("dataset", ["", "cleveland", "hungarian", "switzerland", "va"])
+    cp = st.selectbox("cp", ["", "typical angina", "atypical angina", "non-anginal pain", "asymptomatic"])
+    fbs = st.selectbox("fbs", ["", "true", "false"])
+    restecg = st.selectbox("restecg", ["", "normal", "st-t abnormality", "lv hypertrophy"])
+    exang = st.selectbox("exang", ["", "yes", "no"])
+    slope = st.selectbox("slope", ["", "upsloping", "flat", "downsloping"])
+    thal = st.selectbox("thal", ["", "normal", "fixed defect", "reversible defect"])
 
-            # one-hot sesuai training
-            if cat_cols:
-                input_df = pd.get_dummies(input_df, columns=cat_cols, drop_first=True)
+    submitted = st.form_submit_button("Prediksi")
 
-            # samakan kolom input ke training
-            input_df = input_df.reindex(columns=TRAIN_COLUMNS, fill_value=0)
+prediction = None
+probability = None
+error = None
 
-            pred = model.predict(input_df)[0]
+if submitted and model is not None:
+    try:
+        # validasi minimal: numerik wajib diisi (number_input selalu ada nilainya)
+        input_df = pd.DataFrame([{
+            "age": get_float(age),
+            "trestbps": get_float(trestbps),
+            "chol": get_float(chol),
+            "thalch": get_float(thalch),
+            "oldpeak": get_float(oldpeak),
+            "ca": get_float(ca),
+            "sex": get_str(sex),
+            "dataset": get_str(dataset),
+            "cp": get_str(cp),
+            "fbs": get_str(fbs),
+            "restecg": get_str(restecg),
+            "exang": get_str(exang),
+            "slope": get_str(slope),
+            "thal": get_str(thal)
+        }])
 
-            # beberapa model gak punya predict_proba
-            if hasattr(model, "predict_proba"):
-                proba = model.predict_proba(input_df)[0][1]
-                probability = round(proba * 100, 2)
-            else:
-                probability = None
+        # one-hot sesuai training
+        if cat_cols:
+            input_df = pd.get_dummies(input_df, columns=cat_cols, drop_first=True)
 
-            prediction = "BERISIKO Penyakit Jantung" if pred == 1 else "RISIKO RENDAH"
+        # samakan kolom input ke training
+        input_df = input_df.reindex(columns=TRAIN_COLUMNS, fill_value=0)
 
-        except Exception as e:
-            error = f"Terjadi error: {e}"
+        pred = model.predict(input_df)[0]
 
-    return render_template(
-        "index.html",
-        prediction=prediction,
-        probability=probability,
-        error=error,
-        feature_importance_plot=feature_importance_plot
-    )
+        if hasattr(model, "predict_proba"):
+            proba = model.predict_proba(input_df)[0][1]
+            probability = round(proba * 100, 2)
+        else:
+            probability = None
 
-# Endpoint kecil buat test health di Vercel
-@app.route("/health")
-def health():
-    return {"status": "ok", "model_loaded": model is not None}
+        prediction = "BERISIKO Penyakit Jantung" if pred == 1 else "RISIKO RENDAH"
 
-if __name__ == "__main__":
-    # lokal aja
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    except Exception as e:
+        error = f"Terjadi error: {e}"
+
+# =========================
+# OUTPUT STREAMLIT
+# =========================
+if error:
+    st.error(error)
+
+if prediction is not None:
+    st.success(f"Hasil Prediksi: **{prediction}**")
+    if probability is not None:
+        st.info(f"Probabilitas Risiko: **{probability}%**")
+
+st.divider()
+
+if fig_fi is not None:
+    st.subheader("Feature Importance")
+    st.plotly_chart(fig_fi, use_container_width=True)
