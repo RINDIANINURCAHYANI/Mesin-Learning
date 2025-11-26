@@ -1,6 +1,5 @@
-streamlit
+flask
 joblib
-pandas
 numpy
 scikit-learn
 plotly
